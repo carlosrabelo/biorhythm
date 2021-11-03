@@ -13,6 +13,9 @@ and negative values indicate a low phase.
 """
 
 import math
+from datetime import date, datetime
+
+from .errors import InvalidBirthDateError
 
 PHYSICAL_CYCLE = 23
 EMOTIONAL_CYCLE = 28
@@ -37,3 +40,25 @@ def calculate_biorhythm(days: int) -> tuple[float, float, float]:
     emotional = math.sin(2 * math.pi * days / EMOTIONAL_CYCLE) * 100
     intellectual = math.sin(2 * math.pi * days / INTELLECTUAL_CYCLE) * 100
     return physical, emotional, intellectual
+
+
+def parse_date(date_str: str) -> date:
+    """Parse a date string in ISO 8601 format (YYYY-MM-DD).
+
+    This function enforces a strict single-format policy to avoid ambiguity.
+    For example, "01/02/2000" could be January 2nd (US) or February 1st (BR),
+    so only the unambiguous ISO format is accepted.
+
+    Args:
+        date_str: The date string to parse, must be in YYYY-MM-DD format.
+
+    Returns:
+        A date object corresponding to the parsed value.
+
+    Raises:
+        InvalidBirthDateError: If the string does not match YYYY-MM-DD.
+    """
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError as e:
+        raise InvalidBirthDateError(date_str) from e

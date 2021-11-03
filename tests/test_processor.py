@@ -1,12 +1,15 @@
 """Tests for the biorhythm processor module.
 
-Covers sine-wave calculation. Each function is tested in isolation with
-edge cases and parametrized inputs.
+Covers date parsing and sine-wave calculation. Each function is tested
+in isolation with edge cases and parametrized inputs.
 """
+
+from datetime import date
 
 import pytest
 
-from biorhythm.processor import calculate_biorhythm
+from biorhythm.errors import InvalidBirthDateError
+from biorhythm.processor import calculate_biorhythm, parse_date
 
 
 class TestCalculateBiorhythm:
@@ -45,3 +48,32 @@ class TestCalculateBiorhythm:
         physical, emotional, intellectual = calculate_biorhythm(days)
         for value in [physical, emotional, intellectual]:
             assert -100.0 <= value <= 100.0
+
+
+class TestParseDate:
+    """Tests for the parse_date() function."""
+
+    def test_iso_format(self) -> None:
+        """ISO 8601 format (YYYY-MM-DD) is accepted."""
+        dt = parse_date("2000-01-01")
+        assert dt == date(2000, 1, 1)
+
+    def test_invalid_brazilian_format_raises(self) -> None:
+        """Brazilian format (DD/MM/YYYY) is rejected."""
+        with pytest.raises(InvalidBirthDateError):
+            parse_date("01/01/2000")
+
+    def test_iso_with_time_raises(self) -> None:
+        """ISO format with time component is rejected."""
+        with pytest.raises(InvalidBirthDateError):
+            parse_date("2000-01-01 12:30:00")
+
+    def test_invalid_string_raises(self) -> None:
+        """A string that is not a date raises InvalidBirthDateError."""
+        with pytest.raises(InvalidBirthDateError):
+            parse_date("not-a-date")
+
+    def test_impossible_calendar_date_raises(self) -> None:
+        """Impossible calendar dates are rejected."""
+        with pytest.raises(InvalidBirthDateError):
+            parse_date("2000-02-30")
