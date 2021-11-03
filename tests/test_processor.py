@@ -1,15 +1,15 @@
 """Tests for the biorhythm processor module.
 
-Covers date parsing and sine-wave calculation. Each function is tested
-in isolation with edge cases and parametrized inputs.
+Covers date parsing, day-counting, and sine-wave calculation. Each
+function is tested in isolation with edge cases and parametrized inputs.
 """
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
-from biorhythm.errors import InvalidBirthDateError
-from biorhythm.processor import calculate_biorhythm, parse_date
+from biorhythm.errors import FutureBirthDateError, InvalidBirthDateError
+from biorhythm.processor import calculate_biorhythm, days_since_birth, parse_date
 
 
 class TestCalculateBiorhythm:
@@ -48,6 +48,30 @@ class TestCalculateBiorhythm:
         physical, emotional, intellectual = calculate_biorhythm(days)
         for value in [physical, emotional, intellectual]:
             assert -100.0 <= value <= 100.0
+
+
+class TestDaysSinceBirth:
+    """Tests for the days_since_birth() function."""
+
+    def test_today_returns_zero(self) -> None:
+        """A birth date set to today yields zero days."""
+        today = date.today()
+        assert days_since_birth(today) == 0
+
+    def test_yesterday_returns_one(self) -> None:
+        """A birth date one day ago yields exactly one day."""
+        yesterday = date.today() - timedelta(days=1)
+        assert days_since_birth(yesterday) == 1
+
+    def test_as_of_overrides_today(self) -> None:
+        """An explicit as_of date controls the day count."""
+        birth = date(2000, 1, 1)
+        assert days_since_birth(birth, as_of=date(2000, 1, 11)) == 10
+
+    def test_future_birth_raises(self) -> None:
+        """A birth date after the reference date raises FutureBirthDateError."""
+        with pytest.raises(FutureBirthDateError):
+            days_since_birth(date(2099, 1, 1), as_of=date(2000, 1, 1))
 
 
 class TestParseDate:

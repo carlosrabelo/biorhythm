@@ -15,11 +15,31 @@ and negative values indicate a low phase.
 import math
 from datetime import date, datetime
 
-from .errors import InvalidBirthDateError
+from .errors import FutureBirthDateError, InvalidBirthDateError
 
 PHYSICAL_CYCLE = 23
 EMOTIONAL_CYCLE = 28
 INTELLECTUAL_CYCLE = 33
+
+
+def days_since_birth(birth_date: date, as_of: date | None = None) -> int:
+    """Calculate the number of days between the birth date and a reference day.
+
+    Args:
+        birth_date: The person's date of birth.
+        as_of: Reference date for the calculation. Defaults to today.
+
+    Returns:
+        The whole number of days elapsed since the birth date.
+
+    Raises:
+        FutureBirthDateError: If birth_date is after the reference date.
+    """
+    reference = as_of if as_of is not None else date.today()
+    days = (reference - birth_date).days
+    if days < 0:
+        raise FutureBirthDateError(birth_date.isoformat())
+    return days
 
 
 def calculate_biorhythm(days: int) -> tuple[float, float, float]:
