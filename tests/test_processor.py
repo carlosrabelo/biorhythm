@@ -1,7 +1,8 @@
 """Tests for the biorhythm processor module.
 
-Covers date parsing, day-counting, and sine-wave calculation. Each
-function is tested in isolation with edge cases and parametrized inputs.
+Covers date parsing, day-counting, sine-wave calculation, and the high-level
+compute() entry point. Each function is tested in isolation with edge cases
+and parametrized inputs.
 """
 
 from datetime import date, timedelta
@@ -9,7 +10,12 @@ from datetime import date, timedelta
 import pytest
 
 from biorhythm.errors import FutureBirthDateError, InvalidBirthDateError
-from biorhythm.processor import calculate_biorhythm, days_since_birth, parse_date
+from biorhythm.processor import (
+    calculate_biorhythm,
+    compute,
+    days_since_birth,
+    parse_date,
+)
 
 
 class TestCalculateBiorhythm:
@@ -101,3 +107,35 @@ class TestParseDate:
         """Impossible calendar dates are rejected."""
         with pytest.raises(InvalidBirthDateError):
             parse_date("2000-02-30")
+
+
+class TestCompute:
+    """Tests for the high-level compute() function."""
+
+    def test_returns_dict_with_expected_keys(self, sample_date: str) -> None:
+        """The result dict contains physical, emotional, and intellectual keys."""
+        result = compute(sample_date, as_of=date(2000, 1, 1))
+        assert set(result) == {"physical", "emotional", "intellectual"}
+
+    def test_values_are_floats(self, sample_date: str) -> None:
+        """All values in the result dict are of type float."""
+        result = compute(sample_date, as_of=date(2000, 1, 1))
+        for value in result.values():
+            assert isinstance(value, float)
+
+    def test_as_of_is_deterministic(self, sample_date: str) -> None:
+        """compute() with as_of returns stable values independent of today."""
+        result = compute(sample_date, as_of=date(2000, 1, 1))
+        assert result["physical"] == pytest.approx(0.0, abs=0.01)
+        assert result["emotional"] == pytest.approx(0.0, abs=0.01)
+        assert result["intellectual"] == pytest.approx(0.0, abs=0.01)
+
+    def test_invalid_date_raises(self) -> None:
+        """Passing an unparseable date string raises InvalidBirthDateError."""
+        with pytest.raises(InvalidBirthDateError):
+            compute("invalid")
+
+    def test_future_date_raises(self) -> None:
+        """A future birth date raises FutureBirthDateError."""
+        with pytest.raises(FutureBirthDateError):
+            compute("2099-01-01", as_of=date(2000, 1, 1))
